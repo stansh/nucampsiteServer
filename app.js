@@ -32,10 +32,45 @@ var app = express();
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
 
+// The below order is important
+
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+
+//Authentication middleware
+
+function auth(req, res, next) {
+  console.log(req.headers);
+  const authHeader = req.headers.authorization;
+  if (!authHeader) { //checks if authorization header is empty
+      const err = new Error('You are not authenticated!');
+      res.setHeader('WWW-Authenticate', 'Basic'); //requesting authentication with the type Basic
+      err.status = 401;
+      return next(err); //Express deales with the error and also challenges the client to provide correct credentilas (to create authorization header)
+  }
+ //authorization header is provided
+  const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':'); //Buffer parses the authorization header into a 2 item array (from base 64 encoded stream format)
+  const user = auth[0];
+  const pass = auth[1];
+  if (user === 'admin' && pass === 'password') {
+      return next(); // authorized
+  } else {
+      const err = new Error('You are not authenticated!');
+      res.setHeader('WWW-Authenticate', 'Basic');      
+      err.status = 401;
+      return next(err);
+  }
+}
+
+app.use(auth);
+
+
+
+
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
