@@ -3,6 +3,9 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
+const session = require('express-session');
+const FileStore = require('session-file-store')(session); //function returns another function; first class functions
+
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -37,43 +40,54 @@ app.set('view engine', 'jade');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser('12345-67890-09876-54321')); // cookie secret key to "sign" cooke
+/* app.use(cookieParser('12345-67890-09876-54321')); */        // cookie secret key to "sign" cooke
+
+
+//session middleware
+app.use(session({
+  name: 'session-id',
+  secret: '12345-67890-09876-54321',
+  saveUninitialized: false, // prevents from having empty session files
+  resave: false, // keeps session active; see express sessions
+  store: new FileStore()  // creates File store (object) to save session information to the server's hard disk instead of app's memory
+}));
 
 
 //Authentication middleware
 
-function auth(req, res, next) {
-    if (!req.signedCookies.user) { // signedCookies property of the request object is provided by cookie parser; signed cookie is parsed; property USER will be added to cookie
-        console.log(req.headers);
-        const authHeader = req.headers.authorization;
-        if (!authHeader) { //checks if authorization header is empty
-            const err = new Error('You are not authenticated!');
-            res.setHeader('WWW-Authenticate', 'Basic'); //requesting authentication with the type Basic
-            err.status = 401;
-            return next(err); //Express deales with the error and also challenges the client to provide correct credentilas (to create authorization header)
-        }
-      //authorization header is provided
-        const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':'); //Buffer parses the authorization header into a 2 item array (from base 64 encoded stream format)
-        const user = auth[0];
-        const pass = auth[1];
-        if (user === 'admin' && pass === 'password') {
-            res.cookie('user', 'admin', {signed: true}); // new cookie created; cookie's property USER is added;  {signed: true} lets know to use the secret key to SIGN cookie
-            return next(); // authorized
-        } else {
-            const err = new Error('You are not authenticated!');
-            res.setHeader('WWW-Authenticate', 'Basic');      
-            err.status = 401;
-            return next(err);
-        }
+function auth (req, res, next) {
+  console.log(req.session);
 
+  if (!req.session.user) { // see request headers in Postman
+      const authHeader = req.headers.authorization;
+      if (!authHeader) {
+          const err = new Error('You are not authenticated!');
+          res.setHeader('WWW-Authenticate', 'Basic');
+          err.status = 401;
+          return next(err);
+      }
+
+      const auth = Buffer.from(authHeader.split(' ')[1], 'base64').toString().split(':');
+      const user = auth[0];
+      const pass = auth[1];
+      if (user === 'admin' && pass === 'password') {
+          req.session.user = 'admin';
+          return next(); // authorized
+      } else {
+          const err = new Error('You are not authenticated!');
+          res.setHeader('WWW-Authenticate', 'Basic');
+          err.status = 401;
+          return next(err);
+      }
   } else {
-    if (req.signedCookies.user === 'admin') {  
-        return next();  //access granted from the server
-    } else {
-        const err = new Error('You are not authenticated!');
-        err.status = 401;
-        return next(err);
-    }
+      if (req.session.user === 'admin') {
+          console.log('req.session:', req.session);
+          return next();
+      } else {
+          const err = new Error('You are not authenticated!');
+          err.status = 401;
+          return next(err);
+      }
   }
 }
 
