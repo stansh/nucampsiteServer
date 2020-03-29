@@ -11,12 +11,13 @@ campsiteRouter.use(bodyParser.json());
 campsiteRouter.route('/')
 .get((req, res, next) => {
     Campsite.find()
+    .populate('comments.author') // finds the User document with matching Object ID - populates comment's author filed
     .then(campsites => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
-        res.json(campsites); // will send JSON data to the client in a response STREAM; will closse the response stream afterwards, res.end not needed
+        res.json(campsites);
     })
-    .catch(err => next(err)); // next() will pass off the error to the overall built-in Express error handler
+    .catch(err => next(err));
 })
 .post(authenticate.verifyUser, (req, res, next) => {
     Campsite.create(req.body) // creates and saves new Campsite document to mongoDB; schema will also be checked
@@ -47,6 +48,7 @@ campsiteRouter.route('/')
 campsiteRouter.route('/:campsiteId')
 .get((req, res, next) => {
     Campsite.findById(req.params.campsiteId)
+    .populate('comments.author')
     .then(campsite => {
         res.statusCode = 200;
         res.setHeader('Content-Type', 'application/json');
@@ -84,16 +86,17 @@ campsiteRouter.route('/:campsiteId')
 
 campsiteRouter.route('/:campsiteId/comments')
 .get((req, res, next) => {
-    Campsite.findById(req.params.campsiteId) //route parameter
+    Campsite.findById(req.params.campsiteId)
+    .populate('comments.author')
     .then(campsite => {
-        if (campsite) { // checks if campsite document (object) is returned
+        if (campsite) {
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
-            res.json(campsite.comments); //makes sure the array of comments for the campsite is formatted as JSON as it enters the response stream
-        } else { // handles the error if no campasite with this id found
+            res.json(campsite.comments);
+        } else {
             err = new Error(`Campsite ${req.params.campsiteId} not found`);
             err.status = 404;
-            return next(err); //  built-in Express error handling
+            return next(err);
         }
     })
     .catch(err => next(err));
@@ -102,6 +105,7 @@ campsiteRouter.route('/:campsiteId/comments')
     Campsite.findById(req.params.campsiteId)
     .then(campsite => {
         if (campsite) {
+            req.body.author = req.user._id; // comment will have the ID of the user who submitted it in the author filed
             campsite.comments.push(req.body); // array method
             campsite.save() // saves to the mongoDB (non-static method); returns a promise (then, catch)
             .then(campsite => {
@@ -151,6 +155,7 @@ campsiteRouter.route('/:campsiteId/comments')
 campsiteRouter.route('/:campsiteId/comments/:commentId')
 .get((req, res, next) => {
     Campsite.findById(req.params.campsiteId)
+    .populate('comments.author')
     .then(campsite => {
         if (campsite && campsite.comments.id(req.params.commentId)) { //checks if both values are TRUTHY
             res.statusCode = 200;
