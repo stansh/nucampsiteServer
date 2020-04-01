@@ -34,10 +34,28 @@ exports.jwtPassport = passport.use(
     )
 );
 
-exports.verifyUser = passport.authenticate('jwt', {session: false}); // 'jwt' is the strategy here; no sessions used
 
+
+exports.verifyUser = passport.authenticate('jwt', {session: false}); // 'jwt' is the strategy here; no sessions used
 
 
 exports.local = passport.use(new LocalStrategy(User.authenticate()));// User.authenticate() verifies the req username and password against usernames and passwords in the database
 passport.serializeUser(User.serializeUser()); // converts user data from req object to be able to be stored
 passport.deserializeUser(User.deserializeUser());
+
+
+exports.verifyAdmin = (req, res, next) => {
+    const admin = req.user.admin;
+    if (admin == true){
+        admin
+        return next();
+    } else {
+        const err = new Error('You are not authorized to perform this operation!');
+        err.status = 403 ;
+        return next(err);
+    }
+
+}
+
+
+
