@@ -157,7 +157,7 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
     Campsite.findById(req.params.campsiteId)
     .populate('comments.author')
     .then(campsite => {
-        if (campsite && campsite.comments.id(req.params.commentId)) { //checks if both values are TRUTHY
+        if (campsite && campsite.comments.id(req.params.commentId))  { //checks if both values are TRUTHY
             res.statusCode = 200;
             res.setHeader('Content-Type', 'application/json');
             res.json(campsite.comments.id(req.params.commentId));
@@ -178,6 +178,85 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
     res.end(`POST operation not supported on /campsites/${req.params.campsiteId}/comments/${req.params.commentId}`);
 })
 .put(authenticate.verifyUser, (req, res, next) => {
+    Campsite.findById(req.params.campsiteId)
+    .then(campsite => {
+        if (campsite && campsite.comments.id(req.params.commentId) ) { 
+
+            if (campsite.comments.id(req.params.commentId).author.equals(req.user._id)) {
+
+                    if (req.body.rating) { // checks if new rating is passed in
+                        campsite.comments.id(req.params.commentId).rating = req.body.rating; 
+                    }
+                    if (req.body.text) {// checks if new comment text is passed in
+                        campsite.comments.id(req.params.commentId).text = req.body.text;
+                    }
+                    campsite.save() // saves the updates to the server; it is a promise object; THEN and CATCH methods ae chained to it
+                    .then(campsite => {
+                        res.statusCode = 200;
+                        res.setHeader('Content-Type', 'application/json');
+                        res.json(campsite);
+                    })
+                    .catch(err => next(err));
+                } else {
+                    err = new Error(`This comment can only be edited by the author`);
+                    err.status = 403;
+                    return next(err);
+                }      
+            
+        } else if (!campsite) {
+            err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 404;
+            return next(err);
+        } else {
+            err = new Error(`Comment ${req.params.commentId} not found`);
+            err.status = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+})
+.delete(authenticate.verifyUser, (req, res, next) => {
+    Campsite.findById(req.params.campsiteId)
+    .then(campsite => {
+        if (campsite && campsite.comments.id(req.params.commentId)) {
+
+            if (campsite.comments.id(req.params.commentId).author.equals(req.user._id)) {
+
+                campsite.comments.id(req.params.commentId).remove(); //delete
+                campsite.save()
+                .then(campsite => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(campsite);
+                })
+                .catch(err => next(err));
+
+             } else {
+                    err = new Error(`This comment can only be deleted by the author`);
+                    err.status = 403;
+                    return next(err);
+             }       
+
+        } else if (!campsite) {
+            err = new Error(`Campsite ${req.params.campsiteId} not found`);
+            err.status = 404;
+            return next(err);
+        } else {
+            err = new Error(`Comment ${req.params.commentId} not found`);
+            err.status = 404;
+            return next(err);
+        }
+    })
+    .catch(err => next(err));
+});
+
+
+module.exports = campsiteRouter;
+
+
+//------------------------------------------
+
+/* put(authenticate.verifyUser, (req, res, next) => {
     Campsite.findById(req.params.campsiteId)
     .then(campsite => {
         if (campsite && campsite.comments.id(req.params.commentId)) { //checks if both values are TRUTHY (given campsite and the comment with the given ID)
@@ -206,7 +285,7 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
     })
     .catch(err => next(err));
 })
-.delete(authenticate.verifyUser, (req, res, next) => {
+delete(authenticate.verifyUser, (req, res, next) => {
     Campsite.findById(req.params.campsiteId)
     .then(campsite => {
         if (campsite && campsite.comments.id(req.params.commentId)) { //checks if both values are TRUTHY (given campsite and the comment with the given ID)
@@ -229,7 +308,4 @@ campsiteRouter.route('/:campsiteId/comments/:commentId')
         }
     })
     .catch(err => next(err));
-});
-
-
-module.exports = campsiteRouter;
+}); */

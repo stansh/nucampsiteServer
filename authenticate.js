@@ -45,9 +45,8 @@ passport.deserializeUser(User.deserializeUser());
 
 
 exports.verifyAdmin = (req, res, next) => {
-    const admin = req.user.admin;
-    if (admin == true){
-        admin
+    
+    if (req.user.admin){  
         return next();
     } else {
         const err = new Error('You are not authorized to perform this operation!');
@@ -55,7 +54,7 @@ exports.verifyAdmin = (req, res, next) => {
         return next(err);
     }
 
-}
+};
 
 
 
