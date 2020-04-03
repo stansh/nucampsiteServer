@@ -12,12 +12,16 @@ const config = require('./config');
 
 
 
+
+
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
 const campsiteRouter = require('./routes/campsiteRouter');
 const promotionRouter = require('./routes/promotionRouter');
 const partnerRouter = require('./routes/partnerRouter');
+const uploadRouter = require('./routes/uploadRouter');
+
 
 //connecting to mongoDB
 const mongoose = require('mongoose');
@@ -81,6 +85,7 @@ app.use('/users', usersRouter);
 app.use('/campsites', campsiteRouter);
 app.use('/promotions', promotionRouter);
 app.use('/partners', partnerRouter);
+app.use('/imageUpload', uploadRouter);
 
 
 // catch 404 and forward to error handler
