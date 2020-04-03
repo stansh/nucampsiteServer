@@ -36,6 +36,16 @@ connect.then(() => console.log('Connected correctly to server'), // connect meth
 
 var app = express();
 
+// Secure traffic only; redirecting traffic
+app.all('*', (req, res, next) => { // catches every type of request (get, put, post, delete); '*' wild card used
+  if (req.secure) { // secure property is set automatically as TRUE by Express when connection that is used is HTTPS
+    return next();
+  } else {
+      console.log(`Redirecting to: https://${req.hostname}:${app.get('secPort')}${req.url}`);
+      res.redirect(301, `https://${req.hostname}:${app.get('secPort')}${req.url}`);
+  }
+});
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -46,12 +56,6 @@ app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 /* app.use(cookieParser('12345-67890-09876-54321')); */        // cookie secret key to "sign" cooke
-
-
-
-
-
-
 
 
 
