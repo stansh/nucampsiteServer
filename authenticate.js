@@ -1,6 +1,7 @@
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const User = require('./models/user');
+const FacebookTokenStrategy = require('passport-facebook-token');
 
 const JwtStrategy = require('passport-jwt').Strategy;
 const ExtractJwt = require('passport-jwt').ExtractJwt; // will provide several methods; one of them will be used to extract a token from req object
@@ -55,6 +56,40 @@ exports.verifyAdmin = (req, res, next) => {
     }
 
 };
+
+// see documentation on: https://www.npmjs.com/package/passport-facebook-token  (Configure Strategy)
+
+exports.facebookPassport = passport.use(
+    new FacebookTokenStrategy(
+
+        {    
+            clientID: config.facebook.clientId,     //const config = require('./config.js');
+            clientSecret: config.facebook.clientSecret
+        }, 
+        (accessToken, refreshToken, profile, done) => {
+            User.findOne({facebookId: profile.id}, (err, user) => {  //profile.id received from Facebook; checking if user exists in the database (users collection), if not - creates new user from FB profile data
+                if (err) {
+                    return done(err, false);
+                }
+                if (!err && user) { //user exist in mongoDB database
+                    return done(null, user);
+                } else { // new user
+                    user = new User({ username: profile.displayName }); //profile.displayName received from Facebook
+                    user.facebookId = profile.id;
+                    user.firstname = profile.name.givenName;
+                    user.lastname = profile.name.familyName;
+                    user.save((err, user) => {
+                        if (err) {
+                            return done(err, false);
+                        } else {
+                            return done(null, user);
+                        }
+                    });
+                }
+            });
+        }
+    )
+);
 
 
 

@@ -74,4 +74,14 @@ router.get('/logout', (req, res, next) => {
     }
 });
 
+router.get('/facebook/token', passport.authenticate('facebook-token'), (req, res) => { //passport.authenticate('facebook-token') plugs in the stategy defined in authenticate.js
+    if (req.user) { // user object is added by passport - facebook-token strategy worked
+        const token = authenticate.getToken({_id: req.user._id}); //new token
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json({success: true, token: token, status: 'You are successfully logged in!'});
+    }
+});
+
+
 module.exports = router;
